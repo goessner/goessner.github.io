@@ -8,10 +8,10 @@
 <body>
     <h1>wiki - anim-3</h1>
     <canvas id="c" width="100" height="100"></canvas>
-    <script src='../../g2/g2.js'></script>
+    <script src='../g2.min.js'></script>
     <script>
        var ctx = document.getElementById("c").getContext("2d"),
-           x0 = 50, y0 = 50, r = 40, omega = 1.5;
+           x0 = 50, y0 = 50, r = 40, omega = 3;
            pendulum = g2(),
            world = g2().clr()
                        .style({fs:"#ccc"})
@@ -33,7 +33,8 @@
                   .cir(x,y,8);
           world.exe(ctx);
           requestAnimationFrame(render);
-       }();   // iife
+       };
+       render();
    </script>
 </body>
 </html>
