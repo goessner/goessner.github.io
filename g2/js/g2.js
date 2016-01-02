@@ -671,6 +671,20 @@ g2.State = {
       // manage style properties ...
       getAttr: function(name) { return this.stack[this.stack.length-1][name] || g2.State[name]; },
       setAttr: function(name,val) { this.stack[this.stack.length-1][name] = val; },
+      
+      // manage current transformation
+      get trf() { return this.stack[this.stack.length-1].trf || this.trf0; },
+      set trf(t) {
+         var w = t.w || 0, scl = t.scl || 1,
+             sw = scl*(w?Math.sin(w):0), cw = scl*(w?Math.cos(w):1),
+             trf = this.stack[this.stack.length-1].trf || this.trf0;
+         this.stack[this.stack.length-1].trf = {
+            x:cw*trf.x - sw*trf.y + (t.x || 0),
+            y:sw*trf.x + cw*trf.y + (t.y || 0),
+            w: trf.w + t.w,
+            scl:trf.scl*t.scl
+         };
+      },
 
       save: function() {
          this.stack.push(JSON.parse(JSON.stringify(this.stack[this.stack.length-1])));
@@ -682,8 +696,9 @@ g2.State = {
 //         console.log("restored:"+JSON.stringify(this.stack[this.stack.length-1]));
          return this;
       },
+/*
       transform: function(t) {
-         var trf = this.stack[this.stack.length-1].trf || g2.State.trf,
+         var trf = this.stack[this.stack.length-1].trf || this.trf0,
          sw = t.scl*(t.w?Math.sin(t.w):0), cw = t.scl*(t.w?Math.cos(t.w):1);
          this.stack[this.stack.length-1].trf = {
             x:cw*trf.x - sw*trf.y + t.x,
@@ -693,7 +708,8 @@ g2.State = {
          };
          return this;
       },
-      get currentScale() { return (this.stack[this.stack.length-1].trf || g2.State.trf).scl; }
+*/
+      get currentScale() { return (this.stack[this.stack.length-1].trf || this.trf0).scl; }
    },
 
    // initial state values ... corresponding to Canvas Context ...
@@ -808,7 +824,7 @@ g2.proxy.c2d = function(ctx) { return ctx; }
 g2.prototype.exe.c2d = {
    beg: function(self) {
       if (g2.exeStack++ === 0) { // outermost g2 ...
-         var state = self.state || (self.state = g2.State.create(self)), t = state.trf0;
+         var state = self.getState(), t = state.trf;
          this.setTransform(t.scl,0,0,state.cartesian?-t.scl:t.scl,t.x+0.5,(state.cartesian?this.canvas.height-t.y:t.y)+0.5);
          this.lineWidth = 1;
          this.strokeStyle = "#000";
@@ -950,7 +966,7 @@ g2.prototype.beg.c2d = function beg_c2d(self,args) {
    this.save();
    if (args) {
       if ("x" in args || "y" in args || "w" in args || "scl" in args) {
-         state.transform(args);
+         state.trf = args;
          g2.State.c2d.set.trf.call(this,args,state);
       }
       else if ("matrix" in args)
@@ -972,7 +988,7 @@ g2.prototype.clr.c2d = function clr_c2d() {
 };
 
 g2.prototype.grid.c2d = function grid_c2d(self,color,size) {
-   var state = self.state, trf = state.trf0,  // no ctx required ...
+   var state = self.state, trf = state.trf0,
        cartesian = state.cartesian,
        b = this.canvas.width, h = this.canvas.height,
        sz = size || g2.prototype.grid.getSize(state,trf ? trf.scl : 1),
@@ -996,7 +1012,7 @@ g2.prototype.use.c2d = function use_c2d(self,g,args) {
    this.save();
    if (args) {
       if ("x" in args || "y" in args || "w" in args || "scl" in args) {
-         state.transform(args);
+         state.trf = args;
          g2.State.c2d.set.trf.call(this,args,state);
       }
       else if ("matrix" in args)
