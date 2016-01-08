@@ -8,7 +8,7 @@
 <body>
     <h1>g2 - Map</h1>
     <canvas id="c" width="641" height="481"></canvas>
-    <script src='../g2.min.js'></script>
+    <script src='../dist/g2.min.js'></script>
     <script>
 // Pan the view when user moves the pointer with any button pressed.
 function onmove(e) {
@@ -44,6 +44,6 @@ ctx.canvas.addEventListener("mousemove", onmove, false);  // listen to pan event
 ctx.canvas.addEventListener("wheel", onwheel, false);     // listen to zoom event ..
 render();
     </script>
-    <p>Move pointer/mouse with button pressed to pan and wheel and to zoom.</p>
+    <p>Move pointer/mouse with button pressed to pan and wheel to zoom.</p>
 </body>
 </html>

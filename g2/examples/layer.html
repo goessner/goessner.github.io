@@ -6,43 +6,42 @@
 </head>
 
 <body>
-    <h1>g2 - Layers</h1>
-    <div style="position:relative; width:641px; height:481px;">
-      <canvas id="bg" width="641" height="481" style="position:absolute;left:0;top:0;"></canvas>
-      <canvas id="fg" width="641" height="481" style="position:absolute;;left:0;top:0;"></canvas>
-    </div>
-    <p>Select rectangle by pointer and drag it.</p>
-    <script src='../g2.min.js'></script>
-    <script>
-
-function onbuttondown(e) {
+<h1>g2 - Layers</h1>
+<div style="position:relative; width:641px; height:481px;">
+  <canvas id="bg" width="641" height="481" style="position:absolute;left:0;top:0;"></canvas>
+  <canvas id="fg" width="641" height="481" style="position:absolute;left:0;top:0;"></canvas>
+</div>
+<p>Select square by pointer and drag.</p>
+<script src='../dist/g2.min.js'></script>
+<script>
+function onbuttondown(e) {  // select square at pointer location.
    var x = e.clientX - Math.floor(viewport.left),
        y = e.clientY - Math.floor(viewport.top);
 
-   for (var i=rects.length-1; i>=0; i--)
-      if (x - rects[i].x >= 0 && x - rects[i].x <= sz && 
+   for (var i=rects.length-1; i>=0; i--)                   // test all squares.
+      if (x - rects[i].x >= 0 && x - rects[i].x <= sz &&   // hit occured ?
           y - rects[i].y >= 0 && y - rects[i].y <= sz) {
-         bgDirty = fgDirty = true;
-         selIdx = i;
-         ctxfg.canvas.addEventListener('mousemove',onmove,false);         
+         bgDirty = fgDirty = true;                         // mark layers by dirty flags.
+         selIdx = i;                                       // memoize selected square.
+         ctxfg.canvas.addEventListener('mousemove',onmove,false);  // ready to drag.
          break;
       }
 }
-function onbuttonup(e) {
-   if (selIdx != -1) {
-      bgDirty = fgDirty = true;
-      ctxfg.canvas.removeEventListener('mousemove',onmove,false);
-      selIdx = -1;
+function onbuttonup(e) {  // deselect square.
+   if (selIdx != -1) {    // is one selected ?
+      bgDirty = fgDirty = true;   // mark layers by dirty flags.
+      ctxfg.canvas.removeEventListener('mousemove',onmove,false);  // finish dragging.
+      selIdx = -1;        // nothing selected.
    }
 }
-function onmove(e) {
+function onmove(e) {      // drag square ...
    var rec = rects[selIdx];
-   rec.x += (e.movementX || e.mozMovementX || e.webkitMovementX || 0);
-   rec.y += (e.movementY || e.mozMovementY || e.webkitMovementY || 0);
-   fgDirty = true;
+   rec.x += (e.movementX || e.mozMovementX || e.webkitMovementX || 0);  // .. by relative ..
+   rec.y += (e.movementY || e.mozMovementY || e.webkitMovementY || 0);  // .. displacement.
+   fgDirty = true;        // only mark interactive foreground layer by dirty flag.
 }
-function render() {
-   if (bgDirty) {
+function render() {  // render loop.
+   if (bgDirty) {    // render background ...
       bg.del().clr().grid().style({ls:"darkslategray",lw:3,fs:"papayawhip"});
       for (var i=0; i<rects.length-1; i++)
          if (i !== selIdx)
@@ -50,7 +49,7 @@ function render() {
       bg.exe(ctxbg);
       bgDirty = false;
    }
-   if (fgDirty) {
+   if (fgDirty) {    // render foreground ...
       fg.del().clr();
       if (selIdx != -1)
          fg.style({ls:"darkslategray",lw:3,fs:"orange",sh:[0,0,10,"black"]})
@@ -75,8 +74,7 @@ for (var i = 0; i < 300; i++)
 ctxfg.canvas.addEventListener('mousedown', onbuttondown, false);
 ctxfg.canvas.addEventListener('mouseup',   onbuttonup, false);
 
-render();
-
+render();  // initial call to render loop.
     </script>
 </body>
 </html>
