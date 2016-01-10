@@ -813,339 +813,350 @@ g2.prototype.dump = function(space) {
 g2.symbol = Object.create(null); // {};
 
 // treat node.js
-
 if (typeof module === "object" && module.exports)
-   module.exports = g2;/**
- * @fileoverview g2.c2d.js
- * @author Stefan Goessner (c) 2013-16
+   module.exports = g2;
+/**
+ * @fileoverview g2.svg.js
+ * @author Stefan Goessner (c) 2015/16
  * @license MIT License
  */
 /* jshint -W014 */
 
-g2.ifc.c2d = function(ctx) { return ctx instanceof CanvasRenderingContext2D; }
-g2.proxy.c2d = function(ctx) { return ctx; }
 
-g2.prototype.exe.c2d = {
+g2.Svg = {
+   create: function() { var o = Object.create(this.prototype); o.constructor.apply(o,arguments); return o; },
+   prototype: {
+      constructor: function(ctx) {
+         this.ctx = ctx;
+         this.content = {
+            svg: "",        // main section
+            head: "",       // defs section
+            body: "",       // visible section
+            open: "body"
+         };
+         this.outerTransform = false;
+         this.openGroups = [];
+         this.path = false;
+         this.useReg = [];  // registry of used g2 objects ...
+      },
+      get width() { return "innerHTML" in this.ctx 
+                         ? this.ctx.getAttribute("data-width") 
+                         : this.ctx.width; 
+      },
+      get height() { return "innerHTML" in this.ctx
+                          ? this.ctx.getAttribute("data-height") 
+                          : this.ctx.height;
+      },
+      get str()  { return this.content[this.content.open]; },
+      set str(s) { this.content[this.content.open] = s; },
+      toString: function() {
+         var out = this.content.svg;
+         if (this.content.head)
+            out += '<defs>\n' + this.content.head + '</defs>\n';
+         out += this.content.body + '</svg>\n';
+         return out;
+      },
+      applyStyle: function(args,state,local) {
+         for (var m in args) {
+            var val = args[m];
+            if (typeof val === "string" && val[0] === "@")
+               val = state.getAttr(val.substr(1));
+            if (!local) state.setAttr(m, val);
+            if (g2.State.svg.set[m])
+               g2.State.svg.set[m].call(this,val,state);
+         }
+      }
+   }
+};
+
+g2.ifc.svg = function(ctx) {
+   return Object.getPrototypeOf(ctx) === g2.Svg.prototype
+       || "innerHTML" in ctx
+       || typeof ctx === "object" && "height" in ctx && "width" in ctx;
+}
+g2.proxy.svg = function(ctx) { return Object.getPrototypeOf(ctx) === g2.Svg.prototype ? ctx : g2.Svg.create(ctx); }
+
+g2.prototype.exe.svg = {
    beg: function(self) {
-      if (g2.exeStack++ === 0) { // outermost g2 ...
-         var state = self.getState(), t = state.trf;
-         this.setTransform(t.scl,0,0,state.cartesian?-t.scl:t.scl,t.x+0.5,(state.cartesian?this.canvas.height-t.y:t.y)+0.5);
-         this.lineWidth = 1;
-         this.strokeStyle = "#000";
-         this.setLineDash([]);
-         this.font = g2.State.c2d.getAttr.call(this,"font",state);
-         this.fillStyle = g2.transparent;
+      if (g2.exeStack++ === 0) {   // outermost g2 object.
+         var state = self.getState(),
+             t = state.trf0;
+         this.content.open = "svg";
+         this.str = `<svg width="${this.width}" height="${this.height}" fill="transparent" stroke="black"`;
+         this.str += ` font-family="${state.getAttr('fof')}" font-style="${state.getAttr('fos')}" font-size="${state.getAttr('foz')}" font-weight="${state.getAttr('fow')}">\n`;
+         this.content.open = "body";
+         // chrome and edge don't support transform property on outermost <svg> element. So add outer <g> element.
+         if (state.cartesian) {
+            this.str += `<g transform="matrix(${t.scl},0,0,${-t.scl},${t.x},${this.height-t.y})">\n`;
+            this.outerTransform = true;          
+         }
+         else if (t.x !== 0 || t.y !== 0 || t.scl !== 1 ) {
+            this.str += `><g transform="matrix(${t.scl},0,0,${t.scl},${t.x},${t.y})">\n`;
+            this.outerTransform = true;          
+         }
          state.stack = [{}];
+      }
+      else {                          // 'used' g2 object
+         this.content.open = "head";  // .. so write it to the defs section.
+         this.str += `<g id="${'$'+this.useReg.length}">\n`;
+         this.openGroups.push("group");
       }
    },
    end: function(self) {
-      if (--g2.exeStack === 0)
-         this.fillStyle = "#000000";
+      if (--g2.exeStack === 0) {
+         while (this.openGroups.pop())
+            this.str += '</g>\n';
+         if (this.outerTransform)
+            this.str +='</g>\n';
+         // write svg string ...
+         if ("innerHTML" in this.ctx )
+            this.ctx.innerHTML = this.toString();
+         else
+            this.ctx.svg = this.toString();
+      }
+      else {                       // 'used' g2 object
+         while (this.openGroups.pop() !== "group") // close all defined groups ...
+            this.str += '</g>\n';
+         this.str += '</g>\n';
+         this.content.open = "body";
+      }
    }
 };
 
 /**
- * canvas 2d interface
+ * svg interface
  */
-g2.prototype.p.c2d = CanvasRenderingContext2D.prototype.beginPath;
 
-g2.prototype.m.c2d = CanvasRenderingContext2D.prototype.moveTo;
-
-g2.prototype.l.c2d = CanvasRenderingContext2D.prototype.lineTo;
-
-g2.prototype.q.c2d = CanvasRenderingContext2D.prototype.quadraticCurveTo;
-
-g2.prototype.c.c2d = CanvasRenderingContext2D.prototype.bezierCurveTo;
-
-g2.prototype.a.c2d = CanvasRenderingContext2D.prototype.arc;
-
-g2.prototype.z.c2d = CanvasRenderingContext2D.prototype.closePath;
-
-g2.prototype.stroke.c2d = function stroke_c2d(d) {
-   if (d && typeof Path2D !== "undefined")
-      this.stroke(new Path2D(d));
-   else
-      this.stroke();
+g2.prototype.p.svg = function p_svg() {
+   this.path = "";
 };
 
-g2.prototype.fill.c2d = function fill_c2d(d) {
-   if (d && typeof Path2D !== "undefined")
-      this.fill(new Path2D(d));
-   else
-      this.fill();
+g2.prototype.m.svg = function m_svg(x,y) {
+   this.path += `M${x},${y}`;
 };
 
-g2.prototype.drw.c2d = function drw_c2d(d) {
-   var p2d = d && typeof Path2D !== "undefined" ? new Path2D(d) : false;
-   p2d ? this.fill(p2d) : this.fill();
-   if (this.fillStyle !== g2.transparent && this.shadowColor !== g2.transparent) {
-      var tmp = this.shadowColor;        // avoid stroke shadow when filled ...
-      this.shadowColor = "transparent";  // "rgba(0, 0, 0, 0)"
-      p2d ? this.stroke(p2d) : this.stroke();
-      this.shadowColor = tmp;
+g2.prototype.l.svg = function l_svg(x,y) {
+   this.path += `L${x},${y}`;
+};
+
+g2.prototype.q.svg = function q_svg(x1,y1,x,y) {
+   this.path += `Q${x1},${y1},${x},${y}`;
+};
+
+g2.prototype.c.svg = function c_svg(x1,y1,x2,y2,x,y) {
+   this.path += `C${x1},${y1},${x2},${y2},${x},${y}`;
+};
+
+g2.prototype.a.svg = function a_svg(x0,y0,r,w1,w2,ccw) {
+   var x = x0 + r*Math.cos(w2), y = y0 + r*Math.sin(w2),
+       dw = ccw ? w1 - w2 : w2 - w1;
+   this.path += `A${r},${r},0,${Math.abs(dw)>Math.PI?1:0},${ccw?0:1},${x},${y}`;
+};
+
+g2.prototype.z.svg = function z_svg(x1,y1,x2,y2,x,y) {
+   this.path += 'Z';
+};
+
+g2.prototype.stroke.svg = function stroke_svg(d) {
+   if (d) this.path = d;
+   if (this.path)
+      this.str += `<path d="${this.path}" fill="transparent"/>\n`;
+   this.path = false;
+};
+
+g2.prototype.fill.svg = function fill_svg(d) {
+   if (d) this.path = d;
+   if (this.path)
+      this.str += `<path d="${this.path}" stroke="none"/>\n`;
+   this.path = false;
+};
+g2.prototype.drw.svg = function drw_svg(d) {
+   if (d) this.path = d;
+   if (this.path)
+      this.str += `<path d="${this.path}"/>\n`;
+   this.path = false;
+};
+g2.prototype.txt.svg = function txt_svg(self,s,x,y,w,args) {
+   var state = self.state;
+   this.str += '<text stroke="none"';
+   if (args)
+      this.applyStyle(args,state,true);  // apply style for text element only (local = true)!
+   if (!(args && "foc" in args) && state.getAttr("foc") !== state.getAttr("fill"))
+      this.str += ` fill="${state.getAttr("foc")}"`;
+   if (state.getAttr("tval"))
+      g2.State.svg.set.tval.call(this,state.getAttr("tval"));
+   if (state.cartesian || w) {
+      var sw = (w?Math.sin(w):0), cw = (w?Math.cos(w):1);
+      // compensate cartesian transform to prevent vertically mirrored text about horizontal axis.
+      this.str += state.cartesian
+                ? ` transform="matrix(${cw},${sw},${sw},${-cw},${x||0},${y||0})"`
+                : ` transform="matrix(${cw},${sw},${-sw},${cw},${x||0},${y||0})"`
    }
    else
-      p2d ? this.stroke(p2d) : this.stroke();
+      this.str += ` x="${x}" y="${y}"`;
+   this.str += `>${s}</text>\n`
 };
 
-g2.prototype.txt.c2d = function txt_c2d(self,s,x,y,w,args) {
-   var state = self.state, foc;
-   state.save();
-   this.save();
-   g2.prototype.style.c2d.call(this,self,args);
-   foc = state.getAttr("foc");
-   if (w) {
-      var sw = Math.sin(w), cw = Math.cos(w);
-      this.transform(cw,sw,-sw,cw,(1-cw)*x+sw*y,-sw*x+(1-cw)*y);
-   }
-   if (state.cartesian) { this.scale(1,-1); y = -y; }
-   if (foc !== g2.transparent) {
-      this.fillStyle = foc;
-      this.fillText(s,x,y);
-   }
-   else {
-      this.fillText(s,x,y);
-      this.strokeText(s,x,y);
-   }
-   this.restore();
-   state.restore();
+g2.prototype.img.svg = function img_svg(self,img,x,y,b,h) {
+   b = b || img.width;
+   h = h || img.height;
+   this.str += `<image xlink:href="${img.src}" width="${b}" height="${h}"`;
+   this.str += self.state.cartesian
+             ? ` transform="matrix(1,0,0,-1,${x},${y+h})"`
+             : ` x="${x}" y="${y}"`
+   this.str += `></image>\n`;
 };
 
-g2.prototype.img.c2d = function img_c2d(self,img,x,y,b,h,xoff,yoff,dx,dy) {
-   b = b || img && img.width;
-	h = h || img && img.height;
-	if (self.state.cartesian) { this.save(); this.scale(1,-1); y = -y-h; }
-	if (xoff || yoff || dx || dy)  // non-zero anyone .. ?
-	   this.drawImage(img,xoff,yoff,dx,dy,x,y,b,h);
-	else
-	   this.drawImage(img,x,y,b,h);
-	if (self.state.cartesian) { this.restore(); }
+g2.prototype.lin.svg = function lin_svg(x1,y1,x2,y2) {
+   this.str += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>\n`;
 };
 
-g2.prototype.lin.c2d = function lin_c2d(x1,y1,x2,y2) {
-   this.beginPath();
-   this.moveTo(x1,y1);
-   this.lineTo(x2,y2);
-   this.stroke();
+g2.prototype.rec.svg = function rec_svg(x,y,b,h) {
+   this.str += `<rect x="${x}" y="${y}" width="${b}" height="${h}"/>\n`;
 };
 
-g2.prototype.rec.c2d = function rec_c2d(x,y,b,h) {
-   this.beginPath();
-   this.rect(x,y,b,h);
-   g2.prototype.drw.c2d.call(this);
+g2.prototype.cir.svg = function cir_svg(x,y,r) {
+   this.str += `<circle cx="${x}" cy="${y}" r="${r}"/>\n`;
 };
 
-g2.prototype.cir.c2d = function cir_c2d(x,y,r) {
-   this.beginPath();
-   this.arc(x,y,r,0,Math.PI*2,true);
-   g2.prototype.drw.c2d.call(this);
+g2.prototype.arc.svg = function arc_svg(x,y,r,w,dw) {
+   this.str += `<path d="M${x+Math.cos(w)*r},${y+Math.sin(w)*r} A${r},${r},0,${+(Math.abs(dw)>Math.PI)},
+                         ${+(Math.sign(dw)>0)},${x+Math.cos(w+dw)*r},${y+Math.sin(w+dw)*r}"/>\n`;
 };
 
-g2.prototype.arc.c2d = function arc_c2d(x,y,r,w,dw) {
-   this.beginPath();
-   this.arc(x,y,r,w,w+dw,dw<0);
-   g2.prototype.drw.c2d.call(this);
-};
-
-g2.prototype.ply.c2d = function ply_c2d(parr,mode,itr) {
-   var p, i = 0, split = mode === "split";
+g2.prototype.ply.svg = function ply_svg(parr,mode,itr) {
+   var p, i = 0, split = mode === "split", pstr = '';
+   itr = itr || g2.prototype.ply.itr;
    p = itr(parr,i++);
    if (!p.done) {      // draw polygon ..
-      this.beginPath();
-      this.moveTo(p.x,p.y);
-      while (!(p = itr(parr,i++)).done) {
-         if (split && i%2) this.moveTo(p.x,p.y);  
-         else              this.lineTo(p.x,p.y);
-      }
+      pstr += `M${p.x},${p.y}`;
+      while (!(p = itr(parr,i++)).done)
+         pstr += (split ? (i%2) ? 'M' : 'L' : ' ') + p.x + ',' + p.y;
       if (mode && !split)  // closed then ..
-         this.closePath();
+         pstr += 'Z';
    }
-   g2.prototype.drw.c2d.call(this);
-   return i-1;  // number of points ..
+   this.str += `<path d="${pstr}"/>\n`;
 };
 
-g2.prototype.beg.c2d = function beg_c2d(self,args) {
+g2.prototype.beg.svg = function beg_svg(self,args) {
    var state = self.state;
    state.save();
-   this.save();
+   this.openGroups.push("beg");
+   this.str += '<g';
    if (args) {
       if ("x" in args || "y" in args || "w" in args || "scl" in args) {
          state.trf = args;
-         g2.State.c2d.set.trf.call(this,args,state);
+         g2.State.svg.set.trf.call(this,args,state);
       }
       else if ("matrix" in args)
-         this.transform.apply(this,args.matrix);
-      g2.prototype.style.c2d.call(this,self,args);
+         this.str += ' transform="matrix(' + args.matrix + ')"';
+      this.applyStyle(args,state);
    }
+   this.str += '>\n';
 };
 
-g2.prototype.end.c2d = function end_c2d(self,begidx) {
-   this.restore();
+g2.prototype.end.svg = function end_svg(self,begidx) {
+   while (this.openGroups.pop() !== "beg")
+      this.str += '</g>\n';
+   this.str += '</g>\n';
    self.state.restore();
 };
 
-g2.prototype.clr.c2d = function clr_c2d() {
-   this.save();
-   this.setTransform(1,0,0,1,0,0);
-   this.clearRect(0,0,this.canvas.width,this.canvas.height);
-   this.restore();
+g2.prototype.clr.svg = function clr_svg() {
+   this.content.head = this.content.body = "";
 };
 
-g2.prototype.grid.c2d = function grid_c2d(self,color,size) {
-   var state = self.state, trf = state.trf0,
-       cartesian = state.cartesian,
-       b = this.canvas.width, h = this.canvas.height,
-       sz = size || g2.prototype.grid.getSize(state,trf ? trf.scl : 1),
+g2.prototype.grid.svg = function grid_svg(self,color,size) {
+   var state = self.state, trf = state.getAttr("trf"),  // no ctx required ...
+       b = this.width, h = this.height, trf0 = state.trf0, s = trf0.scl,
+       sz = size || g2.prototype.grid.getSize(state,trf ? s : 1),
        xoff = trf.x ? trf.x%sz-sz : 0, yoff = trf.y ? trf.y%sz-sz : 0;
 
-   this.save();
-   if (cartesian) this.setTransform(1,0,0,-1,0.5,h-0.5);
-   else           this.setTransform(1,0,0,1,0.5,0.5);
-   this.strokeStyle = color || "#ccc";
-   this.lineWidth = 1;
-   this.beginPath();
-   for (var x=xoff,nx=b+1; x<nx; x+=sz) { this.moveTo(x,0); this.lineTo(x,h); }
-   for (var y=yoff,ny=h+1; y<ny; y+=sz) { this.moveTo(0,y); this.lineTo(b,y); }
-   this.stroke();
-   this.restore();
+   this.str += `<path stroke="${color||'#ccc'}" stroke-width="1"`;
+   this.str += state.cartesian ? ` transform="matrix(${1/s},0,0,${-1/s},${-trf0.x/s+0.5},${(h-trf0.y)/s-0.5})"`
+                               : ` transform="matrix(${1/s},0,0,${1/s},${-trf0.x/s+0.5},${-trf0.y/s+0.5})"`;
+   this.str += ' d="'; 
+   for (var x=xoff,nx=b+1; x<nx; x+=sz) this.str += `M${x},0L${x},${h}`;
+   for (var y=yoff,ny=h+1; y<ny; y+=sz) this.str += `M0,${y}L${b},${y}`;
+   this.str += '"/>\n';
 };
 
-g2.prototype.use.c2d = function use_c2d(self,g,args) {
-   var state = self.state;
+g2.prototype.use.svg = function use_svg(self,g,args) {
+   var state = self.state, idx = this.useReg.indexOf(g);
+
+   if (idx < 0) {             // referenced g2 object 'g' not in 'use registry' ..
+      self.exe(this,g);
+      idx = this.useReg.push(g) - 1;
+   }
    state.save();
-   this.save();
+   this.str += `<use xlink:href="${'#$'+idx}"`;
    if (args) {
       if ("x" in args || "y" in args || "w" in args || "scl" in args) {
          state.trf = args;
-         g2.State.c2d.set.trf.call(this,args,state);
+         g2.State.svg.set.trf.call(this,args);
       }
       else if ("matrix" in args)
-         this.transform.apply(this,args.matrix);
-      g2.prototype.style.c2d.call(this,self,args);
+         this.str += ' transform="matrix(' + args.matrix + ')"';
+      this.applyStyle(args,state);
    }
-   self.exe(this,g);
-   this.restore();
+   this.str += '/>\n';
    state.restore();
 };
 
-g2.prototype.style.c2d = function style_c2d(self,args) {
+g2.prototype.style.svg = function style_svg(self,args) {
    var state = self.state, val;
-   for (var m in args) {
-      val = args[m];
-      if (typeof val === "string" && val[0] === "@")
-         val = g2.State.c2d.getAttr.call(this,val.substr(1),state);
-      g2.State.c2d.setAttr.call(this,m,val,state);
-   }
+   this.openGroups.push("style");  // open 'style' labeled group ...
+   this.str += '<g';
+   this.applyStyle(args,state);
+   this.str += '>\n';
 };
 
-g2.State.c2d = {
-   getAttr: function(name,state) {
-      return g2.State.c2d.get[name]
-           ? g2.State.c2d.get[name].call(this,state)
-           : state.getAttr(name);
-   },
-   setAttr: function(name,val,state) {
-      var tnames = {x:0,y:0,w:0,scl:0};
-      if (!(name in tnames)) 
-          g2.State.c2d.set[name] 
-        ? g2.State.c2d.set[name].call(this,val,state)
-        : state.setAttr(name,val);
-   },
-   get: {
-      "fs": function() { return this.fillStyle; },
-      "ls": function() { return this.strokeStyle; },
-      "lw": function(state) { return this.lineWidth*(state.getAttr("lwnosc") ? state.currentScale : 1); },
-      "lc": function() { return this.lineCap; },
-      "lj": function() { return this.lineJoin; },
-      "lo": function() { return this.lineDashOffset; },  // TODO make lw dependent
-      "ld": function() {
-               var lw = this.lineWidth,
-                   ld = this.getLineDash();
-               for (var i=0,n=ld.length; i<n; i++) ld[i] /= lw;
-               return  ld;
-            },
-      "ml": function() { return this.miterLimit; },
-      "sh": function() { return [this.shadowOffsetX,this.shadowOffsetY,this.shadowBlurthis.shadowColor]; },
-      "thal": function() { return this.textAlign; },
-      "tval": function() { return this.textBaseline; },
-      "font": function(state) {
-                 var fos = state.getAttr("fos"),
-                     fow = state.getAttr("fow"),
-                     foz = state.getAttr("foz"),
-                     fof = state.getAttr("fof"),
-                     font = (fos === "normal" ? "" : (fos+" ")) +
-                            (fow === "normal" ? "" : (fow+" ")) +
-                            (foz + "px " + fof);
-                  return font;
-              }
-   },
+g2.State.svg = {
+   get: {},
    set: {
-      "fs": function(val) { this.fillStyle = val === "transparent" ? g2.transparent : val; },
-      "ls": function(val) { this.strokeStyle = val === "transparent" ? g2.transparent : val; },
-      "lw": function(val,state) { this.lineWidth = val/(state.getAttr("lwnosc") ? state.currentScale : 1); },
-      "lc": function(val) { this.lineCap = val; },
-      "lj": function(val) { this.lineJoin = val; },
-      "lo": function(val) { this.lineDashOffset = val; },  // TODO make lw dependent
+      "fs": function(val) { this.str += ` fill="${val}"`; },
+      "ls": function(val) { this.str += ` stroke="${val}"`; },
+      "lw": function(val,state) { this.str += ` stroke-width="${val/(state.getAttr('lwnosc') ? state.currentScale : 1)}"`; },
+      "lc": function(val) {  this.str += ` stroke-linecap="${val}"`; },
+      "lj": function(val) { this.str += ` stroke-linejoin="${val}"`; },
+      "lo": function(val) { this.str += ` stroke-dashoffset="${val}"`; },  // TODO make lw dependent
       "ld": function(val,state) {
                var scl = state.getAttr("lwnosc") ? state.currentScale : 1;
-               if (scl !== 1) {
+               if (!val.length)
+                   this.str += ' stroke-dasharray="none"';
+               else if (scl !== 1) {
                   var lw = this.lineWidth*scl, ld = [];
                   for (var i=0,n=val.length; i<n; i++) ld.push(val[i]/lw);
-                  this.setLineDash(ld);
+                     this.str += ` stroke-dasharray="${''+ld}"`;
                }
                else
-                  this.setLineDash(val);
+                   this.str += ` stroke-dasharray="${''+val}"`;
             },
-      "ml": function(val) { this.miterLimit = val; },
+      "ml": function(val) { this.str += ` stroke-miterlimit="${val}"`; },
+      // use simple css drop-shadow instead of svg filters.
+      // s. https://developer.mozilla.org/de/docs/Web/SVG/Element/feGaussianBlur
+      // s. https://developer.mozilla.org/de/docs/Web/CSS/box-shadow
+      // s. http://thenewcode.com/598/boxshadow-property-vs-dropshadow-filter-a-complete-comparison
       "sh": function(val,state) {
-               if (val) {
-                  state.setAttr("sh",val);
-                  if (val[0]) this.shadowOffsetX = val[0] || 5;
-                  if (val[1]) this.shadowOffsetY = val[1] || 5;
-                  if (val[2]) this.shadowBlur = val[2] || 5;
-                  if (val[3]) this.shadowColor = val[3] || "rgba(0,0,0,0.5)";
-               }
-            },
-      "thal": function(val) { this.textAlign = val; },
-      "tval": function(val) { this.textBaseline = val; },
-      "foc": function(val,state) { state.setAttr("foc",val === "transparent" ? g2.transparent : val); },
-      "fos": function(val,state) { state.setAttr("fos",val); this.font = g2.State.c2d.get["font"](state); },
-      "fow": function(val,state) { state.setAttr("fow",val); this.font = g2.State.c2d.get["font"](state); },
-      "foz": function(val,state) { state.setAttr("foz",val/(state.getAttr("foznosc") ? state.currentScale : 1)); this.font = g2.State.c2d.get["font"](state); },
-      "fof": function(val,state) { state.setAttr("fof",val); this.font = g2.State.c2d.get["font"](state); },
-      "lwnosc": function(val,state) {                      // undocumented beta feature
-                   if (val !== state.getAttr("lwnosc")) {  // value changing ...
-                      if (val) this.lineWidth /= state.currentScale;
-                      else     this.lineWidth *= state.currentScale;
-                      state.setAttr("lwnosc",val);
-                   }
-                },
-      "foznosc": function(val,state) {                       // undocumented beta feature
-                    if (val !== state.getAttr("foznosc")) {  // value changing ...
-                       var foz = state.getAttr("foz");
-                       if (val) foz /= state.currentScale;
-                       else     foz *= state.currentScale;
-                       state.setAttr("foz",foz);
-                       this.font = state.font;
-                       state.setAttr("lwnosc",val);
-                    }
-                 },
-      "trf": function(t,state) {
+               this.str += ` style="filter:drop-shadow(${val[0]||5}px ${val[1]||5}px ${val[2]||5}px ${val[3]||'rgba(0,0,0,0.5)'})"`;
+             },
+      "foc": function(val) { this.str += ` fill="${val}"`; },
+      "fos": function(val) { this.str += ` font-style="${val}"`; },
+      "fow": function(val) { this.str += ` font-weight="${val}"`; },
+      "foz": function(val) { this.str += ` font-size="${val}"`; },
+      "fof": function(val) { this.str += ` font-family="${val}"`; },
+      "thal": function(val) {
+                 var filter = {"center":"middle","right":"end"};
+                 this.str += ` text-anchor="${filter[val]||val}"`;
+              },
+      "tval": function(val) { 
+                 var filter = {"top":"hanging","bottom":"auto"};
+                 this.str += ` dominant-baseline="${filter[val]||val}"`;
+              },
+      "trf": function(t) {
                 var scl = t.scl || 1,
-                    sclChg = scl !== 1,  // scale value changing ...
-                    lw, ld, foz,
                     sw = scl*(t.w?Math.sin(t.w):0), cw = scl*(t.w?Math.cos(t.w):1);
-                if (sclChg) {   // do not scale these style attributes ... so store them ...
-                   lw = g2.State.c2d.get["lw"].call(this,state);
-                   ld = g2.State.c2d.get["ld"].call(this,state);
-                   foz = state.getAttr("foz");
-                }
-                this.transform(cw,sw,-sw,cw,t.x||0,t.y||0);
-                if (sclChg) {   // ... for reassignment.
-                   g2.State.c2d.set["lw"].call(this,lw,state);
-                   g2.State.c2d.set["ld"].call(this,ld,state);
-                   g2.State.c2d.set["foz"].call(this,foz,state);
-                }
+                this.str += ` transform="matrix(${cw},${sw},${-sw},${cw},${t.x||0},${t.y||0})"`;
              }
    }
 }
