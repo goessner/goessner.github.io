@@ -5,9 +5,6 @@
  */
 /* jshint -W014 */
 
-// be node.js friendly ..
-if (typeof module === "object")
-   var g2 = require("../g2/g2.cor.js");  // change ... !
 
 g2.Svg = {
    create: function() { var o = Object.create(this.prototype); o.constructor.apply(o,arguments); return o; },
@@ -25,11 +22,11 @@ g2.Svg = {
          this.path = false;
          this.useReg = [];  // registry of used g2 objects ...
       },
-      get width() { return this.ctx instanceof HTMLElement 
+      get width() { return "innerHTML" in this.ctx 
                          ? this.ctx.getAttribute("data-width") 
                          : this.ctx.width; 
       },
-      get height() { return this.ctx instanceof HTMLElement 
+      get height() { return "innerHTML" in this.ctx
                           ? this.ctx.getAttribute("data-height") 
                           : this.ctx.height;
       },
@@ -57,7 +54,7 @@ g2.Svg = {
 
 g2.ifc.svg = function(ctx) {
    return Object.getPrototypeOf(ctx) === g2.Svg.prototype
-       || ctx instanceof HTMLElement
+       || "innerHTML" in ctx
        || typeof ctx === "object" && "height" in ctx && "width" in ctx;
 }
 g2.proxy.svg = function(ctx) { return Object.getPrototypeOf(ctx) === g2.Svg.prototype ? ctx : g2.Svg.create(ctx); }
@@ -95,7 +92,7 @@ g2.prototype.exe.svg = {
          if (this.outerTransform)
             this.str +='</g>\n';
          // write svg string ...
-         if (this.ctx instanceof HTMLElement)
+         if ("innerHTML" in this.ctx )
             this.ctx.innerHTML = this.toString();
          else
             this.ctx.svg = this.toString();
@@ -270,7 +267,7 @@ g2.prototype.grid.svg = function grid_svg(self,color,size) {
 g2.prototype.use.svg = function use_svg(self,g,args) {
    var state = self.state, idx = this.useReg.indexOf(g);
 
-   if (idx < 0) {                  // referenced g2 object 'g' not in use registry ..
+   if (idx < 0) {             // referenced g2 object 'g' not in 'use registry' ..
       self.exe(this,g);
       idx = this.useReg.push(g) - 1;
    }
