@@ -40,14 +40,16 @@ var Morphr = {
       /**
        * Register morphing handler function.
        * @returns {object} this.
-       * @param {function} hdl Callback function `hdl(q){}`, where `q` is the - via `fn` - normalized time.
+       * @param {function} hdl Callback function `hdl(q){}`, where `q` is the - via `fn` - normalized time or the boolean value `false` to reset for a new start.
        */
       register: function(hdl) {
-         var idx = this.handlers.indexOf(hdl);
-         if (idx === -1)                // not registered, so add ..
-            this.handlers.push(hdl);
-         else                           // already registered, so remove ..
-            this.handlers.splice(idx,1);
+         if (hdl) {
+            var idx = this.handlers.indexOf(hdl);
+            if (idx === -1)                // not registered, so add ..
+               this.handlers.push(hdl);
+            else                           // already registered, so remove ..
+               this.handlers.splice(idx,1);
+         }
          return this;
       },
       /**
@@ -56,7 +58,9 @@ var Morphr = {
        */
       start: function() {
          this.tbeg = false; 
-         this.animate();
+         for (var i=this.handlers.length-1; i>=0; --i)  // reset handlers ...
+            this.handlers[i](false);
+         this.animate(0);
          return this;
       },
       /**
@@ -74,12 +78,31 @@ var Morphr = {
       }
    },
    // some simple motion laws (timing functions) from cam design (VDI 2143) ... all in interval [0,1]
-   linear: function(z) { return z; },
+   // penner functions 
+   linear: function(q) { return q; },
+   inQuad: function (q) { return q*q; },
+   outQuad: function (q) { return 1 - (--q)*q; },
+   inOutQuad: function (q) { return q < 0.5 ? 2*q*q : 1 - 2*(--q)*q; },
+   inCubic: function (q) { return q*q*q; },
+   outCubic: function (q) { return 1 + (--q)*q*q; },
+   inOutCubic: function (q) { return q < 0.5 ? 4*q*q*q : 1 + 4*(--q)*q*q; },
+   inQuart: function (q) { return q*q*q*q; },
+   outQuart: function (q) { return 1 - (--q)*q*q*q; },
+   inOutQuart: function (q) { return q < 0.5 ? 8*q*q*q*q : 1 - 8*(--q)*q*q*q; },
+   inQuint: function (q) { return q*q*q*q*q; },
+   outQuint: function (q) { return 1 + (--q)*q*q*q*q; },
+   inOutQuint: function (q) { return q < 0.5 ? 16*q*q*q*q*q : 1 - 16*(--q)*q*q*q*q; },
+  easeInQuart: function (t) { return t*t*t*t },
+  easeOutQuart: function (t) { return 1-(--t)*t*t*t },
+  easeInOutQuart: function (t) { return t<.5 ? 8*t*t*t*t : 1-8*(--t)*t*t*t },
+  easeInQuint: function (t) { return t*t*t*t*t },
+  easeOutQuint: function (t) { return 1+(--t)*t*t*t*t },
+  easeInOutQuint: function (t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t }
+
+
    quadratic: function(z) { return z <= 0.5 ? 2*z*z : -2*z*z + 4*z - 1; },
    sinoid: function(z) { return z - Math.sin(2*Math.PI*z)/2/Math.PI; },
    poly5: function(z) { return 10*z*z*z - 15*z*z*z*z +6*z*z*z*z*z; }
 }
 
-// export to Node.js
-if (typeof(module) !== "undefined" && module.exports)
-   module.exports = Morphr;
+// see http://greweb.me/2012/02/bezier-curve-based-easing-functions-from-concept-to-implementation/

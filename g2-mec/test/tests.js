@@ -3,6 +3,12 @@ var pi = Math.PI;
 var tests = [
 { title: "origin",
   src: `g2()
+ .use("origin",{x:80,y:20,scl:1.5,fs:"silver"})
+ .use("origin",{x:130,y:50,w:pi/6,
+                ls:"navy",fs:"wheat"})`
+},
+{ title: "origin",
+  src: `g2()
  .cartesian()
  .use("origin",{x:80,y:20,scl:1.5,fs:"silver"})
  .use("origin",{x:130,y:50,w:pi/6,
@@ -52,7 +58,7 @@ var tests = [
 { title: "vec",
   src: `g2()
  .cartesian()
- .vec({x:20,y:20},{x:100,y:60})
+ .vec({x:20,y:20},{x:100,y:60},{ls:"red"})
  .avec({x:10,y:90},30,0,-pi/2,{lw:2})
  .dim({x:120,y:20},{x:180,y:40},{ls:"green"})
  .adim({x:150,y:50},40,0,2*pi/3,{ls:"red"})
@@ -234,21 +240,150 @@ var tests = [
 },
 { title: "polygonial\nmarkers\nall",
   src: `g2()
- .ply([50,25,100,25,100,75,150,75,150,25])
+ .ply([50,25,100,25,100,75,150,75,150,25],
+      false,{lw:2})
            .mark("sqr",["all"])
 `
 },
 { title: "polygonial\nmarkers",
   src: `g2()
- .ply([50,25,100,25,100,75,150,75,150,25])
+ .ply([50,25,100,25,100,75,150,75,150,25],
+      false,{lw:2})
            .mark("dot",["beg","end"])
 `
 },
 { title: "polygonial\nmarkers",
   src: `g2()
- .ply([50,25,100,25,100,75,150,75,150,25])
+ .ply([50,25,100,25,100,75,150,75,150,25],
+      false,{lw:2})
+           .mark("tilde","beg", 1)
+           .mark("tilde","end", 1)
+`
+},
+{ title: "polygonial\nmarkers",
+  src: `g2()
+ .ply([50,25,100,25,100,75,150,75,150,35],
+      false,{lw:1})
            .mark("arrowtick","beg", 1)
            .mark("arrowtick","end",-1)
+`
+},
+{ title: "polygonial\nmarkers",
+  src: `g2()
+ .ply([50,25,100,25,100,75,150,75,150,35],
+      false,{lw:2})
+ .cartesian()
+   .mark("ifo2neg","beg", 1)
+   .mark("ifo2pos","end", 1)
+`
+},
+{ title: "beam\nmarkers",
+  src: `g2()
+ .cartesian()
+ .beam2([50,50,150,50])
+   .mark("ifo2neg","beg", 1)
+   .mark("ifo2pos","end", 1)
+`
+},
+{ title: "beam\nmarkers",
+  src: `g2()
+ .cartesian()
+ .beam2([50,75,150,75,150,50])
+   .mark("ifo3neg","beg", 1)
+   .mark("ifo3pos","end", 1)
+`
+},
+{ title: "pulley",
+  src: `g2()
+ .cartesian()
+ .pulley({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .pulley({x:125,y:50},30)
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "pulley2",
+  src: `g2()
+ .cartesian()
+ .pulley2({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .pulley2({x:125,y:50,w:pi/3},30)
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .cartesian()
+ .rope({x:50,y:50},20,{x:125,y:50,w:pi/3},0)
+ .pulley({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .cartesian()
+ .rope({x:50,y:50},-20,{x:125,y:50,w:pi/3},0)
+ .pulley2({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .rope({x:50,y:50},0,{x:125,y:50,w:pi/3},30)
+ .use("nod",{x:50,y:50})
+ .pulley({x:125,y:50,w:pi/3},30)
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .cartesian()
+ .rope({x:50,y:50},0,{x:125,y:50,w:pi/3},-30)
+ .use("nod",{x:50,y:50})
+ .pulley2({x:125,y:50,w:pi/3},30)
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .cartesian()
+ .rope({x:50,y:50},20,{x:125,y:50,w:pi/3},30)
+ .pulley({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .pulley({x:125,y:50,w:pi/3},30)
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .cartesian()
+ .rope({x:50,y:50},20,{x:125,y:50,w:pi/3},-30)
+ .pulley2({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .pulley2({x:125,y:50,w:pi/3},30)
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .cartesian()
+ .rope({x:50,y:50},-20,{x:125,y:50,w:pi/3},30)
+ .pulley({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .pulley({x:125,y:50,w:pi/3},30)
+ .use("nod",{x:125,y:50})
+`
+},
+{ title: "rope",
+  src: `g2()
+ .cartesian()
+ .rope({x:50,y:50},-20,{x:125,y:50,w:pi/3},-30)
+ .pulley2({x:50,y:50},20)
+ .use("nod",{x:50,y:50})
+ .pulley2({x:125,y:50,w:pi/3},30)
+ .use("nod",{x:125,y:50})
 `
 }
 ]
