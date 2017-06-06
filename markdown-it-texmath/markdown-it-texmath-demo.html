@@ -2,7 +2,6 @@
 <html>
 <head>
   <meta charset='utf-8'>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/2.4.1/github-markdown.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.css">
   <link rel="stylesheet" href="https://gitcdn.xyz/cdn/goessner/markdown-it-texmath/master/css/texmath.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/8.3.1/markdown-it.min.js"></script>
@@ -32,14 +31,13 @@ and squaring
 
 > finally results in the Pythagorean theorem (2)
 >
-> $$ a^2 + b^2 = c^2 $$ (2)</textarea>
+> $$ c^2 = a^2 + b^2 $$ (2)</textarea>
     <div id="out" class="markdown-body" style="flex-grow:1; padding:5px;"></div>
   </div>
   <script>
-    let kt, tm, md, inp, out, parse;
+    let md, inp, out, parse;
     document.addEventListener("DOMContentLoaded", () => {
-        kt = katex;
-        tm = texmath;
+        let tm = texmath.use(katex);
         md = markdownit({html:true}).use(tm);
         inp = document.getElementById('inp');
         out = document.getElementById('out');
