@@ -39,6 +39,8 @@ and squaring
     let md, inp, out, parse;
     document.addEventListener("DOMContentLoaded", () => {
         let tm = texmath.use(katex);
+        // overwrite texmath render function (suppressing katex)
+        // tm.render = function(tex, isblock) { return tex; }
         md = markdownit({html:true}).use(tm);
         inp = document.getElementById('inp');
         out = document.getElementById('out');
